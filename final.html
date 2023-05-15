@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/snap.svg/0.4.1/snap.svg-min.js"
+      integrity="sha512-PtnRurZm07A0j27+J1/3m160UiCHTGeMoLTtK70vdm9csIPlMu/KMfglomIcPoQV14EqrnGqYupUvJXBWoFxUg=="
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+
+    <style>
+      * {
+        padding: 0;
+        margin: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 100vw;
+        height: 100vh;
+        overflow: auto;
+        display: flex;
+      }
+      #svg {
+        width: 70%;
+        height: 100%;
+        background-color: steelblue;
+        border: 3px solid lightblue;
+      }
+
+      #array {
+        width: 30%;
+        height: 100%;
+        background-color: rebeccapurple;
+        border: 3px solid lightblue;
+        overflow: auto;
+      }
+
+      #btn {
+        margin: 5px 5px;
+        padding: 5px 10px;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+      }
+    </style>
+  </head>
+
+  <body>
+    <svg id="svg"></svg>
+    <div id="array"><pre id="pre"></pre></div>
+    <button id="btn" onclick="joinKids()">Join Children</button>
+  </body>
+
+  <script>
+    let paper = Snap("#svg");
+
+    let circles = [];
+
+    function createLine(a, b) {
+      paper
+        .line(
+          a.circle.attr("cx"),
+          a.circle.attr("cy"),
+          b.circle.attr("cx"),
+          b.circle.attr("cy")
+        )
+        .attr({
+          stroke: "white",
+          strokeWidth: "3",
+          id: "Line" + b.circle.attr("id"),
+        });
+
+      console.log(
+        a.circle.attr("cx"),
+        a.circle.attr("cy"),
+        b.circle.attr("cx"),
+        b.circle.attr("cy")
+      );
+    }
+
+    function joinKids() {
+      paper.selectAll("line").remove();
+      for (let root of circles) {
+        dfs(root);
+      }
+    }
+
+    function dfs(root) {
+      if (root.children.length > 0) {
+        for (let i of root.children) {
+          createLine(root, i);
+          dfs(i);
+        }
+      } else {
+        return;
+      }
+    }
+
+    let svg = document.getElementById("svg");
+
+    let pre = document.getElementById("pre");
+
+    let id = 0;
+
+    parentLine = "";
+    childLine = [];
+
+    var move = function (dx, dy) {
+      this.attr({
+        transform:
+          this.data("origTransform") +
+          (this.data("origTransform") ? "T" : "t") +
+          [dx, dy],
+      });
+
+      parentLine.attr({ x2: this.getBBox().cx, y2: this.getBBox().cy });
+    };
+
+    var start = function () {
+      this.data("origTransform", this.transform().local);
+
+      parentLine = paper.select("#Line" + this.attr("id"));
+    };
+    var stop = function () {
+      console.log("finished dragging");
+      this.attr({
+        cx: this.getBBox().cx,
+        cy: this.getBBox().cy,
+        transform: "",
+      });
+
+      updateArrayBox();
+    };
+
+    function updateArrayBox() {
+      pre.innerText = JSON.stringify(circles, null, 2);
+    }
+
+    svg.addEventListener("click", (e) => {
+      if (e.target.tagName == "circle") {
+        return;
+      }
+      let cir = paper
+        .circle(e.offsetX, e.offsetY, 50)
+        .attr({ fill: "red", stroke: "yellow", strokeWidth: "3px", id: id + 1 })
+        .drag();
+
+      cir.drag(move, start, stop);
+
+      id = id + 1;
+
+      circles.push({ circle: cir, children: [] });
+
+      updateArrayBox();
+    });
+
+    svg.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+
+      if (e.target.tagName === "circle") {
+        for (let i of circles) {
+          if (i.circle.attr("id") === e.target.id) {
+            let cir = paper
+              .circle(e.offsetX + 50, e.offsetY + 50, 30)
+              .attr({
+                fill: "green",
+                stroke: "yellow",
+                strokeWidth: "3px",
+                id: id + 1,
+              })
+              .drag();
+
+            cir.drag(move, start, stop);
+
+            id = id + 1;
+            i.children.push({ circle: cir, children: [] });
+
+            updateArrayBox();
+          }
+        }
+      }
+    });
+  </script>
+</html>
